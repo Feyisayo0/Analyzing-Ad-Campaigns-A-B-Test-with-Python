@@ -1,0 +1,119 @@
+# Import necessary libraries
+import pandas as pd
+import numpy as np
+
+# Import the users CSV file and preview the first five rows
+users = pd.read_csv('users.csv')
+print(users.head())
+
+# Import the advertisements CSV file and preview the first five rows
+advertisements = pd.read_csv('advertisements.csv')
+print(advertisements.head())
+
+# Count the unique number of user_ids in users and advertisements
+users_count = users['user_id'].nunique()
+advertisements_count = advertisements['user_id'].nunique()
+
+print(users_count)  # Output: 15122
+print(advertisements_count)  # Output: 14602
+
+# Merge users and advertisements on user_id and timestamp, keeping only matching rows
+users_ads = pd.merge(left=users, 
+                     right=advertisements, 
+                     left_on=['user_id', 'timestamp'], 
+                     right_on=['user_id', 'timestamp'], 
+                     how='inner')
+print(users_ads.head())
+
+# Count the number of views for each ad version
+ad_view_count = users_ads.groupby('ad_version').agg({'user_id':'count'})
+ad_view_count.columns = ['num_views']
+print(ad_view_count)
+
+# Count the number of unique users for each ad version
+ad_view_count = users_ads.groupby('ad_version').agg(
+    {'user_id':['count','nunique']})
+ad_view_count.columns = ['num_views','nunique']
+print(ad_view_count)
+
+# Calculate the click-through rate (CTR) for each ad version
+ad_ctr_pct = users_ads.groupby('ad_version').agg({'clicked':'mean'}) * 100
+ad_ctr_pct.columns = ['click_rate']
+print(ad_ctr_pct)
+
+# Break down click-through rate by social media platform
+social = users_ads.groupby(
+    ['ad_source', 'ad_version']).agg(
+    {'clicked':'mean'})
+social.columns = ['ctr']
+print(social)
+
+# Pivot table for social media performance
+ad_social = users_ads.pivot_table(index='ad_source', 
+                                  columns='ad_version', 
+                                  values='clicked', 
+                                  aggfunc='mean')
+print(ad_social)
+
+# Import the devices CSV file and preview the full dataset
+devices = pd.read_csv('devices.csv')
+print(devices.head())
+
+# Merge users_ads with devices on device_id
+users_device = pd.merge(left=users_ads,
+                        right=devices,
+                        left_on='device_id',
+                        right_on='device_id',
+                        how='left')
+print(users_device.head())
+
+# Calculate the CTR based on device type and ad version
+ad_devices = pd.pivot_table(users_device,
+                           index='device_type',
+                           columns='ad_version',
+                           values='clicked',
+                           aggfunc='mean')
+print(ad_devices)
+
+# Create 'day_of_week' column
+users_device['day_of_week'] = users_device['timestamp'].str.split(' ', expand=True)[2]
+
+# Count the number of users who viewed each ad, grouped by day of the week and ad version
+users_day = users_device.groupby(
+    ['day_of_week', 'ad_version']).agg(
+    {'user_id':'count'})
+print(users_day)
+
+# Split users_device into weekdays and weekends DataFrames
+is_weekend = (users_device['day_of_week'] == 'Saturday') | (users_device['day_of_week'] == 'Sunday')
+weekends = users_device[is_weekend]
+weekdays = users_device[~is_weekend]
+print(weekdays.head())
+
+# Calculate views and click rate for weekdays
+weekday_ctr = weekdays.groupby(['device_type','ad_version']).agg({'user_id':'count',
+                                                                 'clicked':'mean'})
+weekday_ctr.columns = ['weekday_views','weekday_rate']
+weekday_ctr = weekday_ctr.reset_index()
+print(weekday_ctr)
+
+# Calculate views and click rate for weekends
+weekend_ctr = weekends.groupby(['device_type','ad_version']).agg({'user_id':'count',
+                                                                 'clicked':'mean'})
+weekend_ctr.columns = ['weekend_views','weekend_rate']
+weekend_ctr = weekend_ctr.reset_index()
+print(weekend_ctr)
+
+# Combine weekday_ctr and weekend_ctr by merging on device_type and ad_version
+combined_ctr = pd.merge(left=weekday_ctr,
+                        right=weekend_ctr,
+                        left_on=['device_type','ad_version'],
+                        right_on=['device_type','ad_version'],
+                        how='inner')
+print(combined_ctr)
+
+# Modify weekday_views and weekend_views to display average views per day
+combined_ctr['weekday_views'] = combined_ctr['weekday_views'] / 5
+combined_ctr['weekend_views'] = combined_ctr['weekend_views'] / 2
+
+print(combined_ctr)
