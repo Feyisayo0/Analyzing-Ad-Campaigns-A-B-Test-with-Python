@@ -13,9 +13,7 @@ Determine if the effectiveness of ads varies across social media platforms.
 Identify whether mobile, PC, or tablet users should be more heavily targeted in future campaigns.
 
 ### The dataset at a glance 
-The image below shows the number of views recorded for both versions of the ad and the newer version which is the version B has the highest views of 7270.
-
-
+The number of views recorded for both versions of the ad are 7154 for the version A and 7270 for the version B, and the newer version which is the version B has the highest views of 7270.
 
 ### Methodology
 - Data Import and Exploration: Imported and explored the datasets for users and advertisements.
